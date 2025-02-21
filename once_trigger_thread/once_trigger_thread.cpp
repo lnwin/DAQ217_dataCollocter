@@ -49,8 +49,8 @@ void OnceTriggerADCThread::run() {
       emit complete(channel_);
       qDebug()<<"emit complete(channel_)====="<<channel_;
       // 获取到足够的数据后，清空多余的数据
-      base_device->ClearDataBuffer(channel_);
-      break;
+     // base_device->ClearDataBuffer(channel_);
+     // break;
     }
   }
 

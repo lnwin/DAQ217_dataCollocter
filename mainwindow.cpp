@@ -519,6 +519,9 @@ void MainWindow::UpdatePlotData(int channel)
             }
         }
     }
+
+    qDebug()<<"UpdatePlotData=="<<channel;
+
     // 更新图表
     base_wave_widget_->yAxis->setRange(min_val, max_val);
     base_wave_widget_->xAxis->setRange(0, 50000);
