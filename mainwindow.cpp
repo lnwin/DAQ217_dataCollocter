@@ -737,7 +737,16 @@ void MainWindow::ContinuousCollectionUpdatePlotData()
     {
         qDebug()<<" count_data========================"<<count_data[0].size();
         std::vector<std::vector<float>> Transit_cache=divideAndSum (count_data,countTimeMax);
-        qDebug()<<" Transit_cache========================"<<Transit_cache[0].size();
+
+        for (int var = 0; var < 4; ++var)
+        {
+            const auto &data = count_data[var];
+            if (data.empty()) {
+               continue;
+            }
+            count_data[var].clear();
+        }
+       qDebug()<<" count_data=======afterclear================="<<count_data[0].size();
         for (int channel = 0; channel < Transit_cache.size(); ++channel)
         {
             const auto &data = Transit_cache[channel];
@@ -749,17 +758,19 @@ void MainWindow::ContinuousCollectionUpdatePlotData()
             {
                base_wave_widget_->AddData(channel, data.at(index));
             }
-
+            Mydatabuffer[channel].insert(
+                Mydatabuffer[channel].end(),
+                Transit_cache[channel].begin(),
+                Transit_cache[channel].end()
+                );
         }
-        Mydatabuffer.insert(Mydatabuffer.end(), Transit_cache.begin(), Transit_cache.end());
-
+        qDebug()<<" Mydatabuffer.insert==============================="<<Mydatabuffer[0].size();
         float y_min,y_max;
         getMinMax(ADC_Data_Buffer,y_min,y_max);
         base_wave_widget_->xAxis->setRange(0, 4920);
         base_wave_widget_->yAxis->setRange(y_min,y_max);
         base_wave_widget_->replot(QCustomPlot::rpQueuedReplot);
         currentCountTime=0;
-
     }
 
     // 添加图表数据
@@ -778,7 +789,6 @@ void MainWindow::ContinuousCollectionUpdatePlotData()
         }
 
     }
-
 
     qDebug()<<"Mydatabuffer[0].size()=================================================="<<Mydatabuffer[0].size();
     if((Mydatabuffer[0].size()>=MaxDataSaveLength)||(Mydatabuffer[1].size()>=MaxDataSaveLength)||(Mydatabuffer[2].size()>=MaxDataSaveLength)||(Mydatabuffer[3].size()>=MaxDataSaveLength))
