@@ -15,6 +15,7 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     once_trigger_thread/once_trigger_thread.cpp \
+    savemydate.cpp \
     scroll_mode_thread/scroll_mode_thread.cpp \
     utils/uint_validator/uint_validator.cpp \
     utils/utils.cpp \
@@ -26,6 +27,7 @@ HEADERS += \
     continuous_read_thread/continuous_read_thread.h\
     mainwindow.h \
     once_trigger_thread/once_trigger_thread.h \
+    savemydate.h \
     scroll_mode_thread/scroll_mode_thread.h \
     utils/uint_validator/uint_validator.h \
     utils/utils.h \

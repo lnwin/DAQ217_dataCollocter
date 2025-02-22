@@ -7,10 +7,13 @@
 #include "libdaq/device/base_device.h"
 #include "connect_page/connect_page.h"
 #include "scroll_mode_thread/scroll_mode_thread.h"
+#include <memory>
+#include <QFileDialog>
 
 using namespace libdaq::device;
 QThreadPool read_data_thread_pool_;  // 线程池
 std::vector<std::shared_ptr<std::vector<float>>> ADC_Data_Buffer(4); // 连续采集数据缓存
+
 std::vector<bool> ADCDataState = {false, false, false, false};
 
 MainWindow::MainWindow(QWidget *parent)
@@ -25,6 +28,12 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->OnceCollection, &QPushButton::clicked, this, &MainWindow::ClickSoftwareTrigger);
     connect(ui->StopADCCollection, &QPushButton::clicked, this, &MainWindow::ClickStopADCCollection);
 
+
+    mysaveMydate=new saveMydate;
+    mysaveMydateThread=new QThread();
+    mysaveMydate->moveToThread(mysaveMydateThread);
+    mysaveMydateThread->start();
+     connect(this, &MainWindow::sendData2Save, mysaveMydate, &saveMydate::getData2Save);
     InitWaveWidget();
 
 }
@@ -38,10 +47,7 @@ MainWindow::~MainWindow() {
         scroll_mode_adc_thread_ = nullptr;
     }
 }
-void MainWindow::on_pushButton_clicked()
-{
-    readParameter();
-};
+
 void MainWindow::ConnectStatusSlot(bool status, ConnectPage::ConnectType type) {
     if (status) {
         if (!base_device_->InitializeDevice()) {
@@ -94,8 +100,20 @@ void MainWindow::ClickStartADCCollectionAction() {
     }
 
 }
+void MainWindow::on_selectPath_clicked()
+{
+   QString mupath= QFileDialog::getExistingDirectory(this, "Select Directory");
+    ui->saveFilePath->setText(mupath);
+
+};
 void MainWindow::readParameter()
 {
+
+    countTimeMax=ui->countTime->text().toInt();
+    Mydatabuffer.resize(4);
+    count_data.resize(4);
+    MaxDataSaveLength=ui->maxFileLineNum->text().toInt();
+    mysaveMydate->filePath=ui->saveFilePath->text();
     auto legal_sample_rate = base_device_->GetADCLegalSampleRate();
     //set sample rate========================================================
     switch (ui->sampleRate->currentIndex()) {
@@ -378,61 +396,14 @@ void MainWindow::readParameter()
     qInfo(u8"配置成功");
 
 };
-void MainWindow::ClickUpdateConfig() {
-    // 采样率 1M
-    auto legal_sample_rate = base_device_->GetADCLegalSampleRate();
-    if (!base_device_->ConfigADCSampleRate(LockzhinerADCSampleRate::ADCSampleRate_1_M)) {
-        qWarning(u8"采样率配置失败");
-    }
-    // 电压量程 1V
-    if (!base_device_->ConfigADCVoltage(LockzhinerADCVoltage::ADCVoltage_1_V)) {
-        qWarning(u8"电压量程配置失败");
-    }
-    // 4通道使能
-    if (!base_device_->ConfigADCChannel(0x0F)) {
-        qWarning(u8"ADC4通道配置失败");
-    }
-    // 触发电平 0mv
-    uint32_t level = 0;
-    // 双边缘触发 自动触发 软件触发
-    auto type = static_cast<LockzhinerADCTriggerType>(LockzhinerADCTriggerType::Normal);
-    auto mode = static_cast<LockzhinerADCTriggerMode>(LockzhinerADCTriggerMode::Automatic);
-    auto channel = static_cast<LockzhinerADCChannel>(LockzhinerADCChannel::ADCChannelAINNone);
-    if (!base_device_->ConfigADCTrigger(type, mode, channel, level)) {
-        qWarning(u8"DAQ控制器配置ADC触发失败");
-    }
-
-    // 长度 4920个点
-    if (!base_device_->ConfigADCTriggerLength(4920)) {
-        qWarning(u8"触发长度配置失败");
-    }
-    // 超时 100ms
-    if (!base_device_->ConfigTriggerTimeout(100)) {
-        qWarning(u8"超时时间配置失败");
-    }
-
-    // AC/DC 设置为DC
-    uint8_t enable = 0x0F;
-    if (!base_device_->ConfigACDC(enable)) {
-        qWarning("配置AC/DC失败");
-        return;
-    }
-
-    // 电压量程 1V
-    if(!base_device_->ConfigADCVoltage(LockzhinerADCVoltage::ADCVoltage_1_V)){
-        qWarning("配置电压量程失败");
-    }
-
-    qInfo(u8"下发配置成功");
+void MainWindow::ClickUpdateConfig()
+{
+    readParameter();
 }
 
-void MainWindow::ClickSoftwareTrigger() {
-    if (!base_device_->ConfigADCTriggerSource
-         (static_cast<uint8_t>(libdaq::device::DAQADCTriggerSource::TriggerSourceSoftware))) {
-        qWarning(u8"软件触发失败");
-        return;
-    }
-    qInfo(u8"软件触发成功");
+void MainWindow::ClickSoftwareTrigger()
+{
+
 }
 
 void MainWindow::ClickStopADCCollection() {
@@ -446,7 +417,9 @@ void MainWindow::ClickStopADCCollection() {
         scroll_mode_adc_thread_->deleteLater();
         scroll_mode_adc_thread_ = nullptr;
     }
+    read_data_thread_pool_.waitForDone();
     qInfo(u8"停止ADC采集成功");
+    Mydatabuffer.clear();
 }
 
 void MainWindow::InitWaveWidget() {
@@ -574,6 +547,11 @@ void findMinMax(const std::vector<std::vector<float>> &data, float &minValue, fl
 
     // 遍历二维向量，寻找最小值和最大值
     for (const auto &row : data) {
+        // 找到当前子向量中的最小值和最大值
+        if(row.empty())
+        {
+            continue;
+        }
         for (const auto &value : row) {
             if (value < minValue) {
                 minValue = value;
@@ -596,8 +574,9 @@ void getMinMax(const std::vector<std::shared_ptr<std::vector<float>>>& ADC_Data_
 
     // 遍历 ADC_Data_Buffer 中的每个共享指针
     for (const auto& bufferPtr : ADC_Data_Buffer) {
-        if (bufferPtr && !bufferPtr->empty()) {
-            // 找到当前子向量中的最小值和最大值
+        if (bufferPtr && !bufferPtr->empty())
+        {
+
             auto [localMin, localMax] = std::minmax_element(bufferPtr->begin(), bufferPtr->end());
             // 更新全局最小值
             minVal = std::min(minVal, *localMin);
@@ -629,31 +608,11 @@ void MainWindow::UpdatePlotData4Scroll(const std::vector<std::vector<float> > &d
         base_wave_widget_->Clear();
     }
 
-#ifdef USE_DAQ125
-    // 差分数据处理
-    std::vector<std::vector<float> > diff_data;
-    for (int i = 0; i < data.size(); i += 2) {
-        diff_data.emplace_back();
-        int data_size = std::min(data.at(i).size(), data.at(i + 1).size());
-        for (int j = 0; j < data_size; ++j) {
-            diff_data.back().push_back(data.at(i).at(j) - data.at(i + 1).at(j));
-        }
-    }
-    for(int i = 0; i < diff_data.size(); ++i){
-        DAQ_IPC_LOGGER_INFO("channel {} diff data array size is {}", i + 1, diff_data.at(i).size())
-        for(int j = 0; j < diff_data.at(i).size(); ++j){
-            base_wave_widget_->AddData(i, diff_data[i][j]);
-        }
-    }
-#else
-  //  qDebug()<<"data[1].size"<<data[1].size();
-
     for (int i = 0; i < data.size(); ++i) {
         for (int j = 0; j < data.at(i).size(); ++j) {
             base_wave_widget_->AddData(i, data[i][j]);
         }
     }
-#endif
 
     // 更新图表
     float y_min,y_max;
@@ -691,9 +650,26 @@ void MainWindow::UpdatePlotData(int channel) {
 
         for (auto &value : channel_data) {
             base_wave_widget_->AddData(channel, value);
+             Mydatabuffer[channel].emplace_back(value);
         }
     }
+    if(Mydatabuffer[0].size()>=MaxDataSaveLength)
+    {
+        std::vector<std::vector<float>>linshi; // 缓存数据——保存用
+        linshi.resize(4);
+        for (int var = 0; var < linshi.size(); ++var)
+        {
+             if (Mydatabuffer[var].empty())
+             {
+                continue;
+             }
+             linshi[var].assign(Mydatabuffer[var].begin(), Mydatabuffer[var].begin() +MaxDataSaveLength);
+             Mydatabuffer[var].erase(Mydatabuffer[var].begin(),Mydatabuffer[var].begin() +MaxDataSaveLength);
+        }
+        qInfo(u8"Mydatabuffer[0].size()>=MaxDataSaveLength");
+        emit sendData2Save(linshi);
 
+    }
     // 更新图表
     base_wave_widget_->xAxis->setRange(0, 50000);
     base_wave_widget_->replot(QCustomPlot::rpQueuedReplot);
@@ -717,34 +693,116 @@ void MainWindow::ReceiveADCData(int channel) {
 
     ContinuousCollectionUpdatePlotData();
 }
+int countN=0;
+std::vector<std::vector<float>> divideAndSum(const std::vector<std::vector<float>>&Mydatabuffer_count,int TT)
+{
+    std::vector<std::vector<float>> result;
+    result.resize(4);
 
-void MainWindow::ContinuousCollectionUpdatePlotData() {
+
+    for (int i = 0; i < Mydatabuffer_count.size(); ++i)
+    {
+        if(Mydatabuffer_count[i].empty())
+        {
+            continue;
+        }
+        // 计算每段的长度
+
+        int partSize = Mydatabuffer_count[i].size()/TT;
+        std::vector<float> FD(partSize);
+        for (int var = 0; var < partSize; ++var)
+        {
+            for (size_t j = 0; j < TT; ++j)
+            {
+               FD[var]+=Mydatabuffer_count[i][var+partSize*j];
+            }
+        }
+        result[i]=FD;
+    }
+    return result;
+}
+
+void MainWindow::ContinuousCollectionUpdatePlotData()
+{
     if (!is_start_adc_collection_) {
         return;
     }
     base_wave_widget_->Clear();
 
+    if(currentCountTime<countTimeMax)
+    {
+        currentCountTime+=1;
+    }
+    else
+    {
+        qDebug()<<" count_data========================"<<count_data[0].size();
+        std::vector<std::vector<float>> Transit_cache=divideAndSum (count_data,countTimeMax);
+        qDebug()<<" Transit_cache========================"<<Transit_cache[0].size();
+        for (int channel = 0; channel < Transit_cache.size(); ++channel)
+        {
+            const auto &data = Transit_cache[channel];
+            if (data.empty()) {
+               continue;
+            }
+
+            for (int index = 0; index < data.size(); ++index)
+            {
+               base_wave_widget_->AddData(channel, data.at(index));
+            }
+
+        }
+        Mydatabuffer.insert(Mydatabuffer.end(), Transit_cache.begin(), Transit_cache.end());
+
+        float y_min,y_max;
+        getMinMax(ADC_Data_Buffer,y_min,y_max);
+        base_wave_widget_->xAxis->setRange(0, 4920);
+        base_wave_widget_->yAxis->setRange(y_min,y_max);
+        base_wave_widget_->replot(QCustomPlot::rpQueuedReplot);
+        currentCountTime=0;
+
+    }
+
     // 添加图表数据
-    qInfo(u8"更新图表数据");
-    for (int channel = 0; channel < ADC_Data_Buffer.size(); ++channel) {
+    for (int channel = 0; channel < ADC_Data_Buffer.size(); ++channel)
+    {
         const auto &data = ADC_Data_Buffer[channel];
         if (data->empty()) {
             continue;
         }
 
-        for (int index = 0; index < data->size(); ++index) {
-            base_wave_widget_->AddData(channel, data->at(index));
+        for (int index = 0; index < data->size(); ++index)
+        {
+          //base_wave_widget_->AddData(channel, data->at(index));
+          //Mydatabuffer[channel].emplace_back( data->at(index));
+            count_data[channel].emplace_back( data->at(index));
         }
-    }
-     float y_min,y_max;
-    getMinMax(ADC_Data_Buffer,y_min,y_max);
-    // 不开启滚动 直接设置为数据长度的范围
-    base_wave_widget_->xAxis->setRange(0, 4920);
-    base_wave_widget_->yAxis->setRange(y_min,y_max);
-    base_wave_widget_->replot(QCustomPlot::rpQueuedReplot);
 
+    }
+
+
+    qDebug()<<"Mydatabuffer[0].size()=================================================="<<Mydatabuffer[0].size();
+    if((Mydatabuffer[0].size()>=MaxDataSaveLength)||(Mydatabuffer[1].size()>=MaxDataSaveLength)||(Mydatabuffer[2].size()>=MaxDataSaveLength)||(Mydatabuffer[3].size()>=MaxDataSaveLength))
+    {
+        std::vector<std::vector<float>>linshi; // 缓存数据——保存用
+        linshi.resize(4);
+        for (int var = 0; var < linshi.size(); ++var)
+        {
+            if (Mydatabuffer[var].empty())
+            {
+                continue;
+            }
+            linshi[var].assign(Mydatabuffer[var].begin(), Mydatabuffer[var].begin() +MaxDataSaveLength);
+            Mydatabuffer[var].erase(Mydatabuffer[var].begin(),Mydatabuffer[var].begin() +MaxDataSaveLength);
+        }
+         qInfo(u8"Mydatabuffer[0].size()>=MaxDataSaveLength");
+        emit sendData2Save(linshi);
+
+    }
     AutomaticCollection();
+
+
 }
+
 void MainWindow::UpdateAutoScale(bool open_scroll) {
 
 

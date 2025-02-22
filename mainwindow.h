@@ -11,6 +11,7 @@
 #include "scroll_mode_thread/scroll_mode_thread.h"
 #include <once_trigger_thread/once_trigger_thread.h>
 #include <continuous_read_thread/continuous_read_thread.h>
+#include <savemydate.h>
 using DeviceAddress = uint8_t;
 using DeviceMap = std::map<DeviceAddress, std::shared_ptr<libdaq::backend::LockzhinerUSBBackend> >;
 using BusNumber = uint8_t;
@@ -38,7 +39,7 @@ private slots:
     void ClickSoftwareTrigger();
     void ClickStopADCCollection();
     void UpdateAutoScale(bool open_scroll);
-    void on_pushButton_clicked();
+    void on_selectPath_clicked();
 private:
     void InitWaveWidget();
     void ReceiveADCData(int channel);
@@ -49,8 +50,15 @@ private:
     void EndCollection();
     void ContinuousCollectionUpdatePlotData();
 private:
+    bool usecount=false;
+    int countTimeMax=0;
+    int currentCountTime=0;
     Ui::MainWindow *ui;
+    saveMydate*mysaveMydate;
+    QThread *mysaveMydateThread;
     std::vector<std::vector<float>> data_; // 数据
+    std::vector<std::vector<float>> Mydatabuffer; // 缓存数据——保存用
+    std::vector<std::vector<float>> count_data; // 累加缓存数据——保存用
     QVector<bool> channel_state_{true, true, true, true};
     QVector<bool> ADC_data_state_{true, true, true, true};
     QSharedPointer<ScrollModeADCThread> scroll_mode_adc_thread_; // 滚动模式采集数据线程
@@ -65,6 +73,8 @@ private:
     QVector<QCheckBox *> channel_checkbox_vector; // 校正通道复选框
     std::atomic<bool> is_roll_mode_ = false;  // 是否开启滚动模式
     std::atomic<bool> is_collecting = false;
-
+    int MaxDataSaveLength=100000;
+signals:
+    void sendData2Save( const std::vector<std::vector<float>>& data);
 };
 #endif // MAINWINDOW_H
