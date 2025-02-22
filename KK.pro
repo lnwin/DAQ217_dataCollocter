@@ -10,7 +10,8 @@ CONFIG += c++17
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-    connect_page/connect_page.cpp \   
+    connect_page/connect_page.cpp \
+    continuous_read_thread/continuous_read_thread.cpp\
     main.cpp \
     mainwindow.cpp \
     once_trigger_thread/once_trigger_thread.cpp \
@@ -21,7 +22,8 @@ SOURCES += \
     wave/qcustomplot.cpp
 
 HEADERS += \
-    connect_page/connect_page.h \   
+    connect_page/connect_page.h \
+    continuous_read_thread/continuous_read_thread.h\
     mainwindow.h \
     once_trigger_thread/once_trigger_thread.h \
     scroll_mode_thread/scroll_mode_thread.h \

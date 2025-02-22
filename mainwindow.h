@@ -10,6 +10,7 @@
 #include "libdaq/backend/usb_server/usb_server.h"
 #include "scroll_mode_thread/scroll_mode_thread.h"
 #include <once_trigger_thread/once_trigger_thread.h>
+#include <continuous_read_thread/continuous_read_thread.h>
 using DeviceAddress = uint8_t;
 using DeviceMap = std::map<DeviceAddress, std::shared_ptr<libdaq::backend::LockzhinerUSBBackend> >;
 using BusNumber = uint8_t;
@@ -41,10 +42,12 @@ private slots:
 private:
     void InitWaveWidget();
     void ReceiveADCData(int channel);
+    void AutomaticCollection();
     void CommonCollection();
     void ScrollCollection();
     void readParameter();
     void EndCollection();
+    void ContinuousCollectionUpdatePlotData();
 private:
     Ui::MainWindow *ui;
     std::vector<std::vector<float>> data_; // 数据
@@ -61,7 +64,7 @@ private:
     std::atomic<bool> is_start_adc_collection_ = false;  // 是否正在进行采集
     QVector<QCheckBox *> channel_checkbox_vector; // 校正通道复选框
     std::atomic<bool> is_roll_mode_ = false;  // 是否开启滚动模式
-     std::atomic<bool> is_collecting = false;
+    std::atomic<bool> is_collecting = false;
 
 };
 #endif // MAINWINDOW_H

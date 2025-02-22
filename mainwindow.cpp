@@ -79,8 +79,18 @@ void MainWindow::ClickStartADCCollectionAction() {
     }
     else
     {
-        CommonCollection();
-        qWarning(u8"开启AD采集成功！");
+        if(ui->triggerMode->currentIndex()==0)
+        {
+            AutomaticCollection();
+            qWarning(u8"开启AD采集成功！");
+        }
+        else
+        {
+            CommonCollection();
+            qWarning(u8"开启AD采集成功！");
+        }
+
+
     }
 
 }
@@ -516,6 +526,47 @@ void MainWindow::ScrollCollection()
     scroll_mode_adc_thread_->start();
 
 }
+void MainWindow::AutomaticCollection() {
+    // 如果已经被停止，则不要再继续采集
+    if (!is_start_adc_collection_) {
+        return;
+    }
+
+    if (!base_device_->StopADCCollection()) {
+        qWarning(u8"启动ADC采集失败");
+        return;
+    }
+
+    if (!base_device_->StartADCCollection()) {
+        qWarning(u8"启动ADC采集失败");
+        return;
+    }
+
+
+    // 读取数据
+    auto channel_number = base_device_->GetADCLegalChannelSize();
+
+    // 确认上一次采集完成后再开始采集
+    while (read_data_thread_pool_.activeThreadCount()) {
+        QEventLoop loop;
+        QTimer::singleShot(20, &loop, SLOT(quit()));
+        loop.exec();
+        QApplication::processEvents();
+    }
+
+    for (int channel_index = 0; channel_index < channel_number; ++channel_index) {
+        // 获取需要读取数据的长度并初始化读取缓冲区
+        ADC_Data_Buffer[channel_index] = std::make_shared<std::vector<float>>();
+        auto buffer_size = ((4920 / 492) + 10) * 492;
+        ADC_Data_Buffer[channel_index]->resize(buffer_size);
+        // ADC_Data_Buffer[channel_index]->resize(2 * trigger_data_length);
+        auto read_thread = new ContinuousReadADCThread(base_device_, channel_index, 4920,
+                                                       ADC_Data_Buffer[channel_index]);
+        connect(read_thread, &ContinuousReadADCThread::complete, this, &MainWindow::ReceiveADCData);
+        read_thread->setAutoDelete(true);
+        read_data_thread_pool_.start(read_thread);
+    }
+}
 void findMinMax(const std::vector<std::vector<float>> &data, float &minValue, float &maxValue) {
     // 初始化最小值和最大值
     minValue = std::numeric_limits<float>::max();
@@ -532,6 +583,30 @@ void findMinMax(const std::vector<std::vector<float>> &data, float &minValue, fl
             }
         }
     }
+}
+void getMinMax(const std::vector<std::shared_ptr<std::vector<float>>>& ADC_Data_Buffer,float &minValue, float &maxValue)
+{
+    if (ADC_Data_Buffer.empty())
+    {
+        return;
+    }
+
+    float minVal = std::numeric_limits<float>::max();
+    float maxVal = std::numeric_limits<float>::lowest();
+
+    // 遍历 ADC_Data_Buffer 中的每个共享指针
+    for (const auto& bufferPtr : ADC_Data_Buffer) {
+        if (bufferPtr && !bufferPtr->empty()) {
+            // 找到当前子向量中的最小值和最大值
+            auto [localMin, localMax] = std::minmax_element(bufferPtr->begin(), bufferPtr->end());
+            // 更新全局最小值
+            minVal = std::min(minVal, *localMin);
+            // 更新全局最大值
+            maxVal = std::max(maxVal, *localMax);
+        }
+    }
+    minValue=minVal;
+    maxValue= maxVal;
 }
 void MainWindow::UpdatePlotData4Scroll(const std::vector<std::vector<float> > &data) {
 
@@ -623,9 +698,53 @@ void MainWindow::UpdatePlotData(int channel) {
     base_wave_widget_->xAxis->setRange(0, 50000);
     base_wave_widget_->replot(QCustomPlot::rpQueuedReplot);
 
-    CommonCollection();
+   // CommonCollection();
+}
+void MainWindow::ReceiveADCData(int channel) {
+    auto channel_size = base_device_->GetADCLegalChannelSize();
+    ADCDataState.resize(channel_size);
+    ADCDataState[channel] = true;
+
+    // 等待所有通道数据接收完成再显示
+    for (int var = 0; var < ADCDataState.size(); ++var) {
+        if (!ADCDataState[var]) {
+            return;
+        }
+    }
+    for (int var = 0; var < ADCDataState.size(); ++var) {
+        ADCDataState[var] = false;
+    }
+
+    ContinuousCollectionUpdatePlotData();
 }
 
+void MainWindow::ContinuousCollectionUpdatePlotData() {
+    if (!is_start_adc_collection_) {
+        return;
+    }
+    base_wave_widget_->Clear();
+
+    // 添加图表数据
+    qInfo(u8"更新图表数据");
+    for (int channel = 0; channel < ADC_Data_Buffer.size(); ++channel) {
+        const auto &data = ADC_Data_Buffer[channel];
+        if (data->empty()) {
+            continue;
+        }
+
+        for (int index = 0; index < data->size(); ++index) {
+            base_wave_widget_->AddData(channel, data->at(index));
+        }
+    }
+     float y_min,y_max;
+    getMinMax(ADC_Data_Buffer,y_min,y_max);
+    // 不开启滚动 直接设置为数据长度的范围
+    base_wave_widget_->xAxis->setRange(0, 4920);
+    base_wave_widget_->yAxis->setRange(y_min,y_max);
+    base_wave_widget_->replot(QCustomPlot::rpQueuedReplot);
+
+    AutomaticCollection();
+}
 void MainWindow::UpdateAutoScale(bool open_scroll) {
 
 
