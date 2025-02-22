@@ -60,6 +60,7 @@ void BaseWaveWidget::SetSampleRate(int sample_rate) {
 
 
 void BaseWaveWidget::AddData(int channel, double temp_data) {
+
   if (channel >= channel_number_ || channel < 0) {
     qWarning() << "Invalid channel number " << channel << ". max channel_number is " << channel_number_;
     return;
@@ -71,6 +72,7 @@ void BaseWaveWidget::AddData(int channel, double temp_data) {
   }
   data_index = graph(channel)->data()->size();
   graph(channel)->addData(static_cast<double>(data_index) / sample_rate_, temp_data);
+
 }
 
 void BaseWaveWidget::Clear() {
