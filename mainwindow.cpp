@@ -46,8 +46,35 @@ MainWindow::~MainWindow() {
         scroll_mode_adc_thread_->deleteLater();
         scroll_mode_adc_thread_ = nullptr;
     }
+    currentCountTime=0;
 }
+std::vector<std::vector<float>> divideAndSum(const std::vector<std::vector<float>>&Mydatabuffer_count,int TT)
+{
+    std::vector<std::vector<float>> result;
+    result.resize(4);
 
+
+    for (int i = 0; i < Mydatabuffer_count.size(); ++i)
+    {
+        if(Mydatabuffer_count[i].empty())
+        {
+            continue;
+        }
+        // 计算每段的长度
+
+        int partSize = Mydatabuffer_count[i].size()/TT;
+        std::vector<float> FD(partSize);
+        for (int var = 0; var < partSize; ++var)
+        {
+            for (size_t j = 0; j < TT; ++j)
+            {
+                FD[var]+=Mydatabuffer_count[i][var+partSize*j];
+            }
+        }
+        result[i]=FD;
+    }
+    return result;
+}
 void MainWindow::ConnectStatusSlot(bool status, ConnectPage::ConnectType type) {
     if (status) {
         if (!base_device_->InitializeDevice()) {
@@ -587,6 +614,31 @@ void getMinMax(const std::vector<std::shared_ptr<std::vector<float>>>& ADC_Data_
     minValue=minVal;
     maxValue= maxVal;
 }
+void getMinMax(const std::vector<std::vector<float>>& ADC_Data_Buffer,float &minValue, float &maxValue)
+{
+    if (ADC_Data_Buffer.empty())
+    {
+        return;
+    }
+
+    float minVal = std::numeric_limits<float>::max();
+    float maxVal = std::numeric_limits<float>::lowest();
+
+    // 遍历 ADC_Data_Buffer 中的每个共享指针
+    for (const auto &bufferPtr : ADC_Data_Buffer) {
+        if (!bufferPtr.empty())
+        {
+
+            auto [localMin, localMax] = std::minmax_element(bufferPtr.begin(), bufferPtr.end());
+            // 更新全局最小值
+            minVal = std::min(minVal, *localMin);
+            // 更新全局最大值
+            maxVal = std::max(maxVal, *localMax);
+        }
+    }
+    minValue=minVal;
+    maxValue= maxVal;
+}
 void MainWindow::UpdatePlotData4Scroll(const std::vector<std::vector<float> > &data) {
 
     // 判断数据是否为空
@@ -641,8 +693,72 @@ void MainWindow::UpdatePlotData(int channel) {
 
     base_wave_widget_->Clear();
 
+
+    if(currentCountTime<countTimeMax)
+    {
+        currentCountTime+=1;
+    }
+
+    else
+    {
+        std::vector<std::vector<float>> Transit_cache=divideAndSum (count_data,countTimeMax);
+
+        for (int var = 0; var < 4; ++var)
+        {
+            const auto &data = count_data[var];
+            if (data.empty()) {
+                continue;
+            }
+            count_data[var].clear();
+        }
+        for (int channel = 0; channel < Transit_cache.size(); ++channel)
+        {
+            const auto &data = Transit_cache[channel];
+            if (data.empty()) {
+                continue;
+            }
+
+            for (int index = 0; index < data.size(); ++index)
+            {
+                base_wave_widget_->AddData(channel, data.at(index));
+            }
+            Mydatabuffer[channel].insert(
+                Mydatabuffer[channel].end(),
+                Transit_cache[channel].begin(),
+                Transit_cache[channel].end()
+                );
+        }
+        // 更新图表
+        float y_min,y_max;
+        getMinMax(Transit_cache,y_min,y_max);
+        for (int var = 0; var < 4; ++var) {
+            if(!Transit_cache[var].empty())
+            {
+                 base_wave_widget_->xAxis->setRange(0, Transit_cache[var].size());
+            }
+
+        }
+        // 定义一个扩展比例
+        const float paddingRatio = 0.1;
+
+        // 计算数据的范围
+        float range = y_max - y_min;
+
+        // 计算扩展的数值
+        float paddingValue = range * paddingRatio;
+
+        // 计算扩展后的最小值和最大值
+        float new_y_min = y_min - paddingValue;
+        float new_y_max = y_max + paddingValue;
+
+        // 设置 Y 轴的范围
+        base_wave_widget_->yAxis->setRange(new_y_min, new_y_max);
+        base_wave_widget_->replot(QCustomPlot::rpQueuedReplot);
+    }
+
     // 添加数据到图表
-    for (int channel = 0; channel < data_.size(); ++channel) {
+    for (int channel = 0; channel < data_.size(); ++channel)
+    {
         const auto &channel_data = data_.at(channel);
         if (channel_data.empty() || !channel_state_.at(channel)) {
             continue;
@@ -650,7 +766,7 @@ void MainWindow::UpdatePlotData(int channel) {
 
         for (auto &value : channel_data) {
             base_wave_widget_->AddData(channel, value);
-             Mydatabuffer[channel].emplace_back(value);
+            count_data[channel].emplace_back(value);
         }
     }
     if(Mydatabuffer[0].size()>=MaxDataSaveLength)
@@ -659,21 +775,17 @@ void MainWindow::UpdatePlotData(int channel) {
         linshi.resize(4);
         for (int var = 0; var < linshi.size(); ++var)
         {
-             if (Mydatabuffer[var].empty())
-             {
+            if (Mydatabuffer[var].empty())
+            {
                 continue;
-             }
-             linshi[var].assign(Mydatabuffer[var].begin(), Mydatabuffer[var].begin() +MaxDataSaveLength);
-             Mydatabuffer[var].erase(Mydatabuffer[var].begin(),Mydatabuffer[var].begin() +MaxDataSaveLength);
+            }
+            linshi[var].assign(Mydatabuffer[var].begin(), Mydatabuffer[var].begin() +MaxDataSaveLength);
+            Mydatabuffer[var].erase(Mydatabuffer[var].begin(),Mydatabuffer[var].begin() +MaxDataSaveLength);
         }
         qInfo(u8"Mydatabuffer[0].size()>=MaxDataSaveLength");
         emit sendData2Save(linshi);
 
     }
-    // 更新图表
-    base_wave_widget_->xAxis->setRange(0, 50000);
-    base_wave_widget_->replot(QCustomPlot::rpQueuedReplot);
-
    // CommonCollection();
 }
 void MainWindow::ReceiveADCData(int channel) {
@@ -693,34 +805,8 @@ void MainWindow::ReceiveADCData(int channel) {
 
     ContinuousCollectionUpdatePlotData();
 }
-int countN=0;
-std::vector<std::vector<float>> divideAndSum(const std::vector<std::vector<float>>&Mydatabuffer_count,int TT)
-{
-    std::vector<std::vector<float>> result;
-    result.resize(4);
 
 
-    for (int i = 0; i < Mydatabuffer_count.size(); ++i)
-    {
-        if(Mydatabuffer_count[i].empty())
-        {
-            continue;
-        }
-        // 计算每段的长度
-
-        int partSize = Mydatabuffer_count[i].size()/TT;
-        std::vector<float> FD(partSize);
-        for (int var = 0; var < partSize; ++var)
-        {
-            for (size_t j = 0; j < TT; ++j)
-            {
-               FD[var]+=Mydatabuffer_count[i][var+partSize*j];
-            }
-        }
-        result[i]=FD;
-    }
-    return result;
-}
 
 void MainWindow::ContinuousCollectionUpdatePlotData()
 {
@@ -735,7 +821,7 @@ void MainWindow::ContinuousCollectionUpdatePlotData()
     }
     else
     {
-        qDebug()<<" count_data========================"<<count_data[0].size();
+      //  qDebug()<<" count_data========================"<<count_data[0].size();
         std::vector<std::vector<float>> Transit_cache=divideAndSum (count_data,countTimeMax);
 
         for (int var = 0; var < 4; ++var)
@@ -746,7 +832,7 @@ void MainWindow::ContinuousCollectionUpdatePlotData()
             }
             count_data[var].clear();
         }
-       qDebug()<<" count_data=======afterclear================="<<count_data[0].size();
+     //  qDebug()<<" count_data=======afterclear================="<<count_data[0].size();
         for (int channel = 0; channel < Transit_cache.size(); ++channel)
         {
             const auto &data = Transit_cache[channel];
@@ -758,19 +844,41 @@ void MainWindow::ContinuousCollectionUpdatePlotData()
             {
                base_wave_widget_->AddData(channel, data.at(index));
             }
+
             Mydatabuffer[channel].insert(
                 Mydatabuffer[channel].end(),
                 Transit_cache[channel].begin(),
                 Transit_cache[channel].end()
                 );
+
         }
-        qDebug()<<" Mydatabuffer.insert==============================="<<Mydatabuffer[0].size();
+      //  qDebug()<<" Mydatabuffer.insert==============================="<<Mydatabuffer[0].size();
         float y_min,y_max;
-        getMinMax(ADC_Data_Buffer,y_min,y_max);
-        base_wave_widget_->xAxis->setRange(0, 4920);
-        base_wave_widget_->yAxis->setRange(y_min,y_max);
+        getMinMax(Transit_cache,y_min,y_max);
+        for (int var = 0; var < 4; ++var) {
+            if(!Transit_cache[var].empty())
+            {
+               base_wave_widget_->xAxis->setRange(0, Transit_cache[var].size());
+            }
+
+        }
+        // 定义一个扩展比例
+        const float paddingRatio = 0.1;
+
+        // 计算数据的范围
+        float range = y_max - y_min;
+
+        // 计算扩展的数值
+        float paddingValue = range * paddingRatio;
+
+        // 计算扩展后的最小值和最大值
+        float new_y_min = y_min - paddingValue;
+        float new_y_max = y_max + paddingValue;
+
+        // 设置 Y 轴的范围
+        base_wave_widget_->yAxis->setRange(new_y_min, new_y_max);
         base_wave_widget_->replot(QCustomPlot::rpQueuedReplot);
-        currentCountTime=0;
+        currentCountTime=1;
     }
 
     // 添加图表数据
@@ -790,7 +898,7 @@ void MainWindow::ContinuousCollectionUpdatePlotData()
 
     }
 
-    qDebug()<<"Mydatabuffer[0].size()=================================================="<<Mydatabuffer[0].size();
+   // qDebug()<<"Mydatabuffer[0].size()=================================================="<<Mydatabuffer[0].size();
     if((Mydatabuffer[0].size()>=MaxDataSaveLength)||(Mydatabuffer[1].size()>=MaxDataSaveLength)||(Mydatabuffer[2].size()>=MaxDataSaveLength)||(Mydatabuffer[3].size()>=MaxDataSaveLength))
     {
         std::vector<std::vector<float>>linshi; // 缓存数据——保存用
@@ -804,7 +912,7 @@ void MainWindow::ContinuousCollectionUpdatePlotData()
             linshi[var].assign(Mydatabuffer[var].begin(), Mydatabuffer[var].begin() +MaxDataSaveLength);
             Mydatabuffer[var].erase(Mydatabuffer[var].begin(),Mydatabuffer[var].begin() +MaxDataSaveLength);
         }
-         qInfo(u8"Mydatabuffer[0].size()>=MaxDataSaveLength");
+       //  qInfo(u8"Mydatabuffer[0].size()>=MaxDataSaveLength");
         emit sendData2Save(linshi);
 
     }
