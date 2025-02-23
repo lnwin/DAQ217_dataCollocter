@@ -447,6 +447,19 @@ void MainWindow::ClickSoftwareTrigger()
     qInfo(u8"软件触发成功");
 }
 
+void clearMyBuff(std::vector<std::vector<float>>MB )
+{
+    for (int var = 0; var < 4; ++var)
+    {
+        const auto &data = MB[var];
+        if (data.empty()) {
+            continue;
+        }
+        MB[var].clear();
+    }
+};
+
+
 void MainWindow::ClickStopADCCollection() {
     is_start_adc_collection_ = false;
     is_collecting=false;
@@ -460,8 +473,11 @@ void MainWindow::ClickStopADCCollection() {
         scroll_mode_adc_thread_ = nullptr;
     }
     read_data_thread_pool_.waitForDone();
-    qInfo(u8"停止ADC采集成功");
-    Mydatabuffer.clear();
+    qInfo(u8"停止ADC采集成功");  
+    clearMyBuff(Mydatabuffer);
+    clearMyBuff(count_data);
+    clearMyBuff(count_data_common);
+
 }
 
 void MainWindow::InitWaveWidget() {
