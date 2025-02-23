@@ -11,7 +11,8 @@ void OnceTriggerADCThread::start(Priority priority) {
 
   data_.clear();
   data_.reserve(collect_data_length_);
-
+  qDebug()<<"collect_data_length_==="<<collect_data_length_;
+ // emit sendMSG2m(u8"OnceTriggerADCThread::start(Priority priority)");
 }
 
 void OnceTriggerADCThread::quit() {
@@ -21,11 +22,12 @@ void OnceTriggerADCThread::quit() {
 }
 
 void OnceTriggerADCThread::run() {
-  qInfo(u8"OnceTriggerADCThread::run() start");
+ // emit sendMSG2m(u8"OnceTriggerADCThread::run() start");
   const auto base_device = base_device_.toStrongRef();
 
   while (thread_is_running_) {
     auto temp_data = std::make_unique<float[]>(collect_data_length_);
+
     bool success = base_device->TryReadADCData(channel_, temp_data.get(), collect_data_length_);
 
     if(!thread_is_running_){
@@ -51,7 +53,8 @@ void OnceTriggerADCThread::run() {
     }
   }
 
-  qInfo(u8"OnceTriggerADCThread::run() end");
+
+ // emit sendMSG2m(u8"OnceTriggerADCThread::run() end");
 }
 
 bool OnceTriggerADCThread::CheckDataEmpty() {

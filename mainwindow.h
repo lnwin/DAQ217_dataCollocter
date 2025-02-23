@@ -40,6 +40,7 @@ private slots:
     void ClickStopADCCollection();
     void UpdateAutoScale(bool open_scroll);
     void on_selectPath_clicked();
+    void getMSG2m(QString);
 private:
     void InitWaveWidget();
     void ReceiveADCData(int channel);
@@ -53,12 +54,14 @@ private:
     bool usecount=false;
     int countTimeMax=0;
     int currentCountTime=0;
+    int sampleNum;
     Ui::MainWindow *ui;
     saveMydate*mysaveMydate;
     QThread *mysaveMydateThread;
     std::vector<std::vector<float>> data_; // 数据
     std::vector<std::vector<float>> Mydatabuffer; // 缓存数据——保存用
     std::vector<std::vector<float>> count_data; // 累加缓存数据——保存用
+    std::vector<std::vector<float>> count_data_common; // 累加缓存数据——保存用
     QVector<bool> channel_state_{true, true, true, true};
     QVector<bool> ADC_data_state_{true, true, true, true};
     QSharedPointer<ScrollModeADCThread> scroll_mode_adc_thread_; // 滚动模式采集数据线程

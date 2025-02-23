@@ -20,7 +20,7 @@ public:
 
 signals:
   void complete(int channel);
-
+    void sendMSG2m(QString);
 public Q_SLOTS:
   void start(Priority = InheritPriority);
   void quit();

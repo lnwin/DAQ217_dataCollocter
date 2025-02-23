@@ -17,7 +17,7 @@
    <widget class="QPushButton" name="StartADCCollection">
     <property name="geometry">
      <rect>
-      <x>650</x>
+      <x>560</x>
       <y>560</y>
       <width>101</width>
       <height>51</height>
@@ -28,16 +28,19 @@
     </property>
    </widget>
    <widget class="QPushButton" name="OnceCollection">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
     <property name="geometry">
      <rect>
       <x>870</x>
       <y>500</y>
       <width>80</width>
-      <height>23</height>
+      <height>51</height>
      </rect>
     </property>
     <property name="text">
-     <string>软件触发</string>
+     <string>测试</string>
     </property>
    </widget>
    <widget class="QStackedWidget" name="stackedWidget">
@@ -45,8 +48,8 @@
      <rect>
       <x>0</x>
       <y>10</y>
-      <width>631</width>
-      <height>541</height>
+      <width>551</width>
+      <height>591</height>
      </rect>
     </property>
     <property name="currentIndex">
@@ -58,7 +61,7 @@
    <widget class="QPushButton" name="StopADCCollection">
     <property name="geometry">
      <rect>
-      <x>760</x>
+      <x>680</x>
       <y>560</y>
       <width>101</width>
       <height>51</height>
@@ -71,7 +74,7 @@
    <widget class="QPushButton" name="Connnectbutton">
     <property name="geometry">
      <rect>
-      <x>650</x>
+      <x>560</x>
       <y>500</y>
       <width>101</width>
       <height>51</height>
@@ -84,7 +87,7 @@
    <widget class="QPushButton" name="UpdateConfig">
     <property name="geometry">
      <rect>
-      <x>760</x>
+      <x>680</x>
       <y>500</y>
       <width>101</width>
       <height>51</height>
@@ -97,9 +100,9 @@
    <widget class="QGroupBox" name="groupBox">
     <property name="geometry">
      <rect>
-      <x>650</x>
+      <x>560</x>
       <y>10</y>
-      <width>301</width>
+      <width>391</width>
       <height>481</height>
      </rect>
     </property>
@@ -127,7 +130,7 @@
     <widget class="QLabel" name="label_3">
      <property name="geometry">
       <rect>
-       <x>150</x>
+       <x>190</x>
        <y>60</y>
        <width>71</width>
        <height>22</height>
@@ -140,7 +143,7 @@
     <widget class="QLabel" name="label_5">
      <property name="geometry">
       <rect>
-       <x>150</x>
+       <x>190</x>
        <y>90</y>
        <width>71</width>
        <height>22</height>
@@ -327,7 +330,7 @@
       <rect>
        <x>10</x>
        <y>130</y>
-       <width>51</width>
+       <width>101</width>
        <height>22</height>
       </rect>
      </property>
@@ -340,7 +343,7 @@
       <rect>
        <x>70</x>
        <y>130</y>
-       <width>81</width>
+       <width>111</width>
        <height>22</height>
       </rect>
      </property>
@@ -373,7 +376,7 @@
       <rect>
        <x>10</x>
        <y>160</y>
-       <width>51</width>
+       <width>71</width>
        <height>22</height>
       </rect>
      </property>
@@ -419,7 +422,7 @@
       <rect>
        <x>10</x>
        <y>190</y>
-       <width>51</width>
+       <width>81</width>
        <height>22</height>
       </rect>
      </property>
@@ -432,7 +435,7 @@
       <rect>
        <x>130</x>
        <y>190</y>
-       <width>51</width>
+       <width>21</width>
        <height>22</height>
       </rect>
      </property>
@@ -456,9 +459,9 @@
     <widget class="QLabel" name="label_11">
      <property name="geometry">
       <rect>
-       <x>160</x>
+       <x>200</x>
        <y>190</y>
-       <width>51</width>
+       <width>91</width>
        <height>22</height>
       </rect>
      </property>
@@ -469,7 +472,7 @@
     <widget class="QLineEdit" name="sampleNum">
      <property name="geometry">
       <rect>
-       <x>220</x>
+       <x>280</x>
        <y>190</y>
        <width>51</width>
        <height>21</height>
@@ -482,9 +485,9 @@
     <widget class="QLabel" name="label_12">
      <property name="geometry">
       <rect>
-       <x>180</x>
-       <y>260</y>
-       <width>51</width>
+       <x>200</x>
+       <y>250</y>
+       <width>91</width>
        <height>21</height>
       </rect>
      </property>
@@ -495,9 +498,9 @@
     <widget class="QLineEdit" name="timeout">
      <property name="geometry">
       <rect>
-       <x>230</x>
-       <y>260</y>
-       <width>41</width>
+       <x>280</x>
+       <y>250</y>
+       <width>51</width>
        <height>21</height>
       </rect>
      </property>
@@ -508,8 +511,8 @@
     <widget class="QLabel" name="label_13">
      <property name="geometry">
       <rect>
-       <x>280</x>
-       <y>260</y>
+       <x>340</x>
+       <y>250</y>
        <width>31</width>
        <height>21</height>
       </rect>
@@ -537,7 +540,7 @@
     <widget class="QCheckBox" name="enable_CH3">
      <property name="geometry">
       <rect>
-       <x>90</x>
+       <x>120</x>
        <y>260</y>
        <width>80</width>
        <height>21</height>
@@ -569,7 +572,7 @@
     <widget class="QCheckBox" name="enable_CH4">
      <property name="geometry">
       <rect>
-       <x>90</x>
+       <x>120</x>
        <y>290</y>
        <width>80</width>
        <height>21</height>
@@ -699,7 +702,7 @@
       <rect>
        <x>10</x>
        <y>380</y>
-       <width>81</width>
+       <width>111</width>
        <height>22</height>
       </rect>
      </property>
@@ -710,9 +713,9 @@
     <widget class="QLineEdit" name="saveFilePath">
      <property name="geometry">
       <rect>
-       <x>90</x>
+       <x>140</x>
        <y>380</y>
-       <width>141</width>
+       <width>151</width>
        <height>22</height>
       </rect>
      </property>
@@ -723,7 +726,7 @@
     <widget class="QPushButton" name="selectPath">
      <property name="geometry">
       <rect>
-       <x>240</x>
+       <x>310</x>
        <y>380</y>
        <width>31</width>
        <height>22</height>
@@ -770,7 +773,7 @@
       <rect>
        <x>10</x>
        <y>410</y>
-       <width>81</width>
+       <width>111</width>
        <height>22</height>
       </rect>
      </property>
@@ -781,7 +784,7 @@
     <widget class="QLineEdit" name="maxFileLineNum">
      <property name="geometry">
       <rect>
-       <x>90</x>
+       <x>140</x>
        <y>410</y>
        <width>141</width>
        <height>22</height>
@@ -794,7 +797,7 @@
     <widget class="QLabel" name="label_20">
      <property name="geometry">
       <rect>
-       <x>240</x>
+       <x>310</x>
        <y>410</y>
        <width>31</width>
        <height>22</height>
@@ -830,7 +833,7 @@
     <widget class="QComboBox" name="CH3_MaxV">
      <property name="geometry">
       <rect>
-       <x>210</x>
+       <x>280</x>
        <y>60</y>
        <width>71</width>
        <height>22</height>
@@ -876,7 +879,7 @@
     <widget class="QComboBox" name="CH4_MaxV">
      <property name="geometry">
       <rect>
-       <x>210</x>
+       <x>280</x>
        <y>90</y>
        <width>71</width>
        <height>22</height>
@@ -899,11 +902,17 @@
     <widget class="QLabel" name="label_21">
      <property name="geometry">
       <rect>
-       <x>130</x>
+       <x>170</x>
        <y>160</y>
-       <width>81</width>
+       <width>121</width>
        <height>22</height>
       </rect>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-family:'Inter','-apple-system','BlinkMacSystemFont','Segoe UI','SF Pro SC','SF Pro Display','SF Pro Icons','PingFang SC','Hiragino Sans GB','Microsoft YaHei','Helvetica Neue','Helvetica','Arial','sans-serif'; font-size:16px; font-weight:600; color:#000000;&quot;&gt;数据长度&lt;/span&gt;&lt;span style=&quot; font-family:'Inter','-apple-system','BlinkMacSystemFont','Segoe UI','SF Pro SC','SF Pro Display','SF Pro Icons','PingFang SC','Hiragino Sans GB','Microsoft YaHei','Helvetica Neue','Helvetica','Arial','sans-serif'; font-size:16px; color:#000000;&quot;&gt;：从触发时刻开始，采集卡会持续采集数据，直到达到预设的采集点数，这个预设的采集点数就是触发数据长度。例如，如果触发数据长度设置为 1000 个点，那么采集卡会在触发后采集 1000 个数据点，然后停止采集（除非设置为连续采集模式）。&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="whatsThis">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 1;&quot;</string>
      </property>
      <property name="text">
       <string>触发数据长度</string>
@@ -912,7 +921,7 @@
     <widget class="QLineEdit" name="triggerLength">
      <property name="geometry">
       <rect>
-       <x>210</x>
+       <x>280</x>
        <y>160</y>
        <width>71</width>
        <height>21</height>
@@ -925,9 +934,9 @@
     <widget class="QLabel" name="label_22">
      <property name="geometry">
       <rect>
-       <x>160</x>
+       <x>200</x>
        <y>130</y>
-       <width>51</width>
+       <width>81</width>
        <height>22</height>
       </rect>
      </property>
@@ -941,9 +950,9 @@
      </property>
      <property name="geometry">
       <rect>
-       <x>220</x>
+       <x>280</x>
        <y>130</y>
-       <width>61</width>
+       <width>71</width>
        <height>22</height>
       </rect>
      </property>
@@ -977,7 +986,7 @@
     <widget class="QLineEdit" name="countTime">
      <property name="geometry">
       <rect>
-       <x>100</x>
+       <x>120</x>
        <y>230</y>
        <width>51</width>
        <height>21</height>

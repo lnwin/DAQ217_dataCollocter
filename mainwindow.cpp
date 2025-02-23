@@ -119,8 +119,16 @@ void MainWindow::ClickStartADCCollectionAction() {
         }
         else
         {
+            is_collecting=true;
+
+//            if(!base_device_->ConfigADCTriggerSource
+//                 (static_cast<uint8_t>(libdaq::device::DAQADCTriggerSource::TriggerSourceSoftware))){
+//                qWarning(u8"软件触发失败");
+//                return;
+//            }
+
             CommonCollection();
-            qWarning(u8"开启AD采集成功！");
+            qWarning(u8"开启CommonCollectionAD采集成功！");
         }
 
 
@@ -135,10 +143,11 @@ void MainWindow::on_selectPath_clicked()
 };
 void MainWindow::readParameter()
 {
-
+    sampleNum=ui->sampleNum->text().toInt();
     countTimeMax=ui->countTime->text().toInt();
     Mydatabuffer.resize(4);
     count_data.resize(4);
+    count_data_common.resize(4);
     MaxDataSaveLength=ui->maxFileLineNum->text().toInt();
     mysaveMydate->filePath=ui->saveFilePath->text();
     auto legal_sample_rate = base_device_->GetADCLegalSampleRate();
@@ -344,7 +353,7 @@ void MainWindow::readParameter()
         break;
     case 3:
         channel=static_cast<libdaq::device::LockzhinerADCChannel>(libdaq::device::LockzhinerADCChannel::ADCChannelAIN4);
-       // channel_state_[3]=false;
+        //channel_state_[3]=false;
         break;
     }
     // 触发电平 0mv
@@ -363,7 +372,7 @@ void MainWindow::readParameter()
         qWarning(u8"超时时间配置失败");
     }
     // AC/DC设置为===========================================================================================
-    int CHAC_DC =     ((ui->CH1_AC_DC->currentIndex()==1) ? 1 : 0) |
+    int CHAC_DC =   ((ui->CH1_AC_DC->currentIndex()==1) ? 1 : 0) |
                   ((ui->CH2_AC_DC->currentIndex()==1) ? 2 : 0) |
                   ((ui->CH3_AC_DC->currentIndex()==1) ? 4 : 0) |
                   ((ui->CH4_AC_DC->currentIndex()==1) ? 8 : 0);
@@ -430,11 +439,17 @@ void MainWindow::ClickUpdateConfig()
 
 void MainWindow::ClickSoftwareTrigger()
 {
-
+    if(!base_device_->ConfigADCTriggerSource
+         (static_cast<uint8_t>(libdaq::device::DAQADCTriggerSource::TriggerSourceSoftware))){
+        qWarning(u8"软件触发失败");
+        return;
+    }
+    qInfo(u8"软件触发成功");
 }
 
 void MainWindow::ClickStopADCCollection() {
     is_start_adc_collection_ = false;
+    is_collecting=false;
     if (!base_device_->StopADCCollection()) {
         qWarning(u8"停止ADC采集失败");
         return;
@@ -464,9 +479,11 @@ void MainWindow::InitWaveWidget() {
 }
 void MainWindow::CommonCollection()
 {
+
     if(!is_collecting){
         return;
     }
+    is_collecting=true;
 
     EndCollection();
 
@@ -495,10 +512,17 @@ void MainWindow::CommonCollection()
 
         auto thread = QSharedPointer<OnceTriggerADCThread>::create(base_device_, i, data_[i]);
         connect(thread.get(), &OnceTriggerADCThread::complete, this, &MainWindow::UpdatePlotData);
+        connect(thread.get(), &OnceTriggerADCThread::sendMSG2m, this, &MainWindow::getMSG2m);
         once_trigger_adc_thread_list_.push_back(thread);
         thread->start();
     }
+
 };
+
+void MainWindow::getMSG2m(QString msg)
+{
+   // ui->textEdit->append(msg);
+}
 void MainWindow::ScrollCollection()
 {
     if (!is_start_adc_collection_) {
@@ -557,10 +581,11 @@ void MainWindow::AutomaticCollection() {
     for (int channel_index = 0; channel_index < channel_number; ++channel_index) {
         // 获取需要读取数据的长度并初始化读取缓冲区
         ADC_Data_Buffer[channel_index] = std::make_shared<std::vector<float>>();
-        auto buffer_size = ((4920 / 492) + 10) * 492;
+       // auto buffer_size = ((4920 / 492) + 10) * 492;
+        auto buffer_size = sampleNum;
         ADC_Data_Buffer[channel_index]->resize(buffer_size);
-        // ADC_Data_Buffer[channel_index]->resize(2 * trigger_data_length);
-        auto read_thread = new ContinuousReadADCThread(base_device_, channel_index, 4920,
+        //ADC_Data_Buffer[channel_index]->resize(2 * 50000);
+        auto read_thread = new ContinuousReadADCThread(base_device_, channel_index, sampleNum,
                                                        ADC_Data_Buffer[channel_index]);
         connect(read_thread, &ContinuousReadADCThread::complete, this, &MainWindow::ReceiveADCData);
         read_thread->setAutoDelete(true);
@@ -675,7 +700,8 @@ void MainWindow::UpdatePlotData4Scroll(const std::vector<std::vector<float> > &d
 
 
 }
-void MainWindow::UpdatePlotData(int channel) {
+void MainWindow::UpdatePlotData(int channel)
+{
     ADC_data_state_[channel] = true;
 
     // 等待所有通道数据接收完成再显示
@@ -701,15 +727,15 @@ void MainWindow::UpdatePlotData(int channel) {
 
     else
     {
-        std::vector<std::vector<float>> Transit_cache=divideAndSum (count_data,countTimeMax);
+        std::vector<std::vector<float>> Transit_cache=divideAndSum (count_data_common,countTimeMax);
 
         for (int var = 0; var < 4; ++var)
         {
-            const auto &data = count_data[var];
+            const auto &data = count_data_common[var];
             if (data.empty()) {
                 continue;
             }
-            count_data[var].clear();
+            count_data_common[var].clear();
         }
         for (int channel = 0; channel < Transit_cache.size(); ++channel)
         {
@@ -765,8 +791,8 @@ void MainWindow::UpdatePlotData(int channel) {
         }
 
         for (auto &value : channel_data) {
-            base_wave_widget_->AddData(channel, value);
-            count_data[channel].emplace_back(value);
+           // base_wave_widget_->AddData(channel, value);
+            count_data_common[channel].emplace_back(value);
         }
     }
     if(Mydatabuffer[0].size()>=MaxDataSaveLength)
@@ -782,11 +808,12 @@ void MainWindow::UpdatePlotData(int channel) {
             linshi[var].assign(Mydatabuffer[var].begin(), Mydatabuffer[var].begin() +MaxDataSaveLength);
             Mydatabuffer[var].erase(Mydatabuffer[var].begin(),Mydatabuffer[var].begin() +MaxDataSaveLength);
         }
-        qInfo(u8"Mydatabuffer[0].size()>=MaxDataSaveLength");
+        qInfo(u8"Mydatabuffer[0].size()>=MaxDataSaveLength=================");
         emit sendData2Save(linshi);
 
     }
-   // CommonCollection();
+    CommonCollection();
+
 }
 void MainWindow::ReceiveADCData(int channel) {
     auto channel_size = base_device_->GetADCLegalChannelSize();
